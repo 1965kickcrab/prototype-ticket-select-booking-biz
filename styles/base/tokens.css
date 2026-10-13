@@ -12,6 +12,7 @@
   --color-primary: #1e78f0;
   --color-primary-soft: #f6f9ff;
   --color-warning: #ed6060;
+  --color-success: #34865a;
   --color-action-enabled: var(--color-primary);
   --color-action-disabled: var(--color-border);
   --color-action-text: #ffffff;

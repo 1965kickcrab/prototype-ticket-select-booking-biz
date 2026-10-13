@@ -27,6 +27,9 @@ export function renderSchoolReservationEdit(page, reservationId) {
     }));
   });
   page.querySelector('[data-area="reservationInfo"]').append(createReservationInfo(reservation, member, pet));
+  const memo = page.querySelector('[data-field="reservationMemo"]');
+  memo.value = draft.memo || "";
+  memo.addEventListener("input", () => { draft.memo = memo.value; });
   const dateLabel = page.querySelector('[data-field="reservationDateLabel"]');
   dateLabel.textContent = formatReservationDate(draft.date);
   const dateButton = page.querySelector('[data-action="editReservationDate"]');

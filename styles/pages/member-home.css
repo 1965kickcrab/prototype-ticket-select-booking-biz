@@ -1183,7 +1183,6 @@
   color: #ed6060;
 }
 
-.member-ticket-history-arrow,
 .member-detail-app-ticket-card-arrow {
   color: #999999;
   font-size: 18px;
@@ -2011,8 +2010,8 @@ body[data-page="app-ticket-usage"] .member-ticket-detail-screen {
 }
 
 .member-ticket-count-cell.is-error strong,
-.ticket-detail-usage-header p.is-error {
-  color: #ed6060;
+.ticket-detail-reservable-count[data-state="warning"] {
+  color: var(--color-warning);
 }
 
 .pet-detail-modal-overlay {
@@ -2395,7 +2394,7 @@ body[data-page="app-ticket-usage"] .member-ticket-detail-screen {
 
 .ticket-detail-usage-table {
   display: grid;
-  grid-template-columns: 1fr 1.2fr 1fr 1.4fr;
+  grid-template-columns: 1fr 1.2fr 0.8fr 1fr 1.4fr;
   align-items: center;
 }
 

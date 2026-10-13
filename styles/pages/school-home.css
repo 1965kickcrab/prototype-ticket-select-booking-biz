@@ -1024,7 +1024,7 @@
 
 .school-reservation-table-row {
   display: grid;
-  grid-template-columns: 40px 78px repeat(3, minmax(0, 1fr));
+  grid-template-columns: 40px 78px repeat(3, minmax(0, 1fr)) 40px;
   align-items: center;
   min-height: 50px;
   padding: 0 16px 0 0;
@@ -1033,7 +1033,7 @@
 }
 
 .school-reservation-table[data-state="monthlyMemberSearch"] .school-reservation-table-row {
-  grid-template-columns: 40px 78px 110px repeat(3, minmax(0, 1fr));
+  grid-template-columns: 40px 78px 110px repeat(3, minmax(0, 1fr)) 40px;
 }
 
 .school-reservation-table-row.is-header {
@@ -1123,6 +1123,15 @@
 
 .school-reservation-status.is-cancelled {
   color: #ed6060;
+}
+
+.school-reservation-status[data-state="completed"] {
+  color: var(--color-success);
+}
+
+.school-reservation-more-icon {
+  width: 16px;
+  height: 16px;
 }
 
 .school-reservation-panel-actions {

@@ -6,14 +6,20 @@ import { createSchoolReservationCancelAlert } from "../../shared/components/scho
 import { createToast, TOAST_AUTO_DISMISS_MS } from "../../shared/components/toast.js";
 import { cancelSchoolReservation } from "../../shared/services/school-reservation-cancellation-service.js";
 import { createElement } from "../../shared/utils/dom.js";
+import { createWebReservationDetail } from "./school-reservation-detail-web-renderer.js";
 
 const CHEVRON_LEFT_ICON_PATH = "../assets/iconChevronLeft.svg";
 let reservationDetailToastDismissTimer = null;
 
 export function renderSchoolReservationDetail(rootElement, reservationId, toastMessage = "") {
   const reservations = getSchoolHomeReservations();
-  const reservation = reservations.find((item) => item.id === reservationId) || reservations[0];
+  const reservation = reservations.find((item) => item.id === reservationId);
+  if (!reservation) { window.location.replace("./index.html"); return; }
   rootElement.innerHTML = "";
+  if (!isAppViewport()) {
+    rootElement.append(createWebReservationDetail(reservation));
+    return;
+  }
   rootElement.append(createDetailPage(reservation, () => { window.location.href = `./school-reservation-edit.html?reservationId=${encodeURIComponent(reservation.id)}`; }, () => {
     if (isAppViewport()) {
       window.location.href = "./index.html?toast=reservationCancelled";
@@ -71,6 +77,7 @@ function createDetailPage(reservation, onEdit, onCancel, toastMessage) {
 
   const content = createElement("div", { className: "school-reservation-detail-content" });
   content.append(createReservationInfo(reservation, member, pet));
+  content.append(createReservationMemo(reservation, onEdit));
   content.append(createReservationDate(reservation?.date));
   content.append(createReservationTicket(reservation, pet));
   page.append(content);
@@ -97,5 +104,17 @@ function createReservationTicket(reservation, pet) {
   ticket.append(createElement("div", { className: "school-reservation-detail-ticket-name", textContent: ticketName }));
   ticket.append(createElement("div", { className: "school-reservation-detail-ticket-round", textContent: ticketUsageRound }));
   section.append(ticket);
+  return section;
+}
+
+function createReservationMemo(reservation, onEdit) {
+  const section = document.querySelector('[data-template="appReservationMemo"]').content.firstElementChild.cloneNode(true);
+  const memo = section.querySelector('[data-field="reservationMemo"]');
+  const memoText = String(reservation.memo || "").trim();
+  memo.textContent = memoText || "작성한 메모가 없습니다.";
+  memo.dataset.state = memoText ? "filled" : "empty";
+  const editButton = section.querySelector('[data-action="editReservationMemo"]');
+  editButton.disabled = reservation.status === "취소";
+  editButton.addEventListener("click", onEdit);
   return section;
 }

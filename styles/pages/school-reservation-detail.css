@@ -243,6 +243,10 @@
     margin-top: 28px;
   }
 
+  .school-reservation-detail-memo-section {
+    margin-top: 28px;
+  }
+
   .school-reservation-detail-ticket {
     min-height: 56px;
     padding: 14px 20px;
@@ -326,4 +330,188 @@
 .school-reservation-detail-date-control:focus-within {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+}
+
+.reservation-detail-navigation {
+  display: grid;
+}
+
+.reservation-detail-web-content {
+  padding-bottom: 32px;
+}
+
+.reservation-detail-web-cards {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.reservation-detail-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.reservation-detail-web-cards .reservation-detail-card-heading {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.reservation-detail-card-heading h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.reservation-detail-status {
+  border-radius: var(--radius-2);
+  padding: 6px 12px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.reservation-detail-status[data-state="completed"] {
+  color: var(--color-success);
+}
+
+.reservation-ticket-edit-dialog {
+  width: min(760px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+.reservation-ticket-edit-content {
+  gap: var(--space-4);
+  text-align: left;
+}
+
+.reservation-detail-form-title {
+  margin: 0;
+  text-align: center;
+}
+
+.reservation-detail-form-heading {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  align-items: center;
+}
+
+.reservation-detail-form-heading .reservation-detail-form-title {
+  grid-column: 2;
+}
+
+.reservation-ticket-edit-label {
+  margin: 0;
+  font-size: 16px;
+}
+
+.reservation-ticket-table-wrap {
+  overflow-x: auto;
+}
+
+.reservation-ticket-table {
+  width: 100%;
+  min-width: 540px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.reservation-ticket-table th,
+.reservation-ticket-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--color-border-light);
+  text-align: left;
+}
+
+.reservation-ticket-table th {
+  background: var(--color-page-subtle);
+  white-space: nowrap;
+}
+
+.reservation-ticket-table [data-field="ticketCount"],
+.reservation-ticket-table [data-field="ticketExpiry"] {
+  white-space: nowrap;
+}
+
+.reservation-ticket-count[data-state="changed"] {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.reservation-ticket-count__value[data-state="warning"] {
+  color: var(--color-warning);
+}
+
+.reservation-ticket-table tr[data-state="selected"] {
+  background: var(--color-primary-soft);
+}
+
+.reservation-ticket-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.reservation-ticket-option input {
+  flex-shrink: 0;
+}
+
+.reservation-detail-info-list {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.reservation-detail-info-list dt {
+  color: var(--color-text-secondary);
+}
+
+.reservation-detail-info-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.reservation-detail-ticket-round {
+  display: block;
+  margin-top: var(--space-2);
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+.reservation-detail-memo {
+  min-height: 112px;
+  padding: var(--space-3) var(--space-4);
+  resize: vertical;
+}
+
+.reservation-detail-web-content [data-action="cancelReservation"] {
+  min-width: 112px;
+  height: 40px;
+  border-radius: var(--radius-2);
+  font-weight: 700;
+}
+
+.reservation-detail-web-content [data-field="reservationDate"] {
+  margin: 0;
+}
+
+@media (min-width: 431px) and (max-width: 700px) {
+  .reservation-detail-web-content .page-title {
+    height: auto;
+    min-height: 64px;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: var(--space-3) 0;
+  }
+
+  .reservation-detail-web-content .page-title h1 {
+    font-size: 20px;
+  }
+
+  .reservation-detail-info-list {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
 }

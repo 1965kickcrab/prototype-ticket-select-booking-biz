@@ -2,3 +2,6 @@ import { renderSchoolReservationDetail } from "../features/school-reservation-de
 
 const reservationId = new URLSearchParams(window.location.search).get("reservationId");
 renderSchoolReservationDetail(document.querySelector("#app"), reservationId);
+window.matchMedia("(max-width: 430px)").addEventListener("change", () => {
+  renderSchoolReservationDetail(document.querySelector("#app"), reservationId);
+});

@@ -26,7 +26,7 @@ export function getTicketChangePreview(reservation, tickets, currentTicketId, ne
   })).filter((item) => item.before !== item.after);
 }
 
-export function saveReservationEdit(reservationId, { date, ticketHistoryId }) {
+export function saveReservationEdit(reservationId, { date, ticketHistoryId, memo }) {
   const reservations = getSchoolHomeReservations();
   const reservation = reservations.find((item) => item.id === reservationId);
   if (!reservation || reservation.status === "취소") return { reservation: null };
@@ -46,6 +46,7 @@ export function saveReservationEdit(reservationId, { date, ticketHistoryId }) {
   return { reservation: saveSchoolHomeReservation({
     ...reservation,
     date,
+    ...(memo !== undefined ? { memo } : {}),
     ...(changed ? { ticketHistoryId: ticket.id, ticketId: ticket.ticketId || ticket.id, ticketName: ticket.ticketName, isOverbooked: false } : {}),
   }) };
 }
