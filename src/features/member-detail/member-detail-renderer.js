@@ -22,6 +22,7 @@ import {
 import { getTicketList } from "../../shared/data/ticket-list.js";
 import { getActiveTicketReservableCount, getLatestUsedTicketId, getOverbookedReservationCount, getTicketExpiryDate, getTicketStartDate, getTicketStatus, getTicketUsageHistory, getTicketUsageItem } from "../../shared/services/ticket-status-service.js";
 import { cancelTicketIssue } from "../../shared/services/ticket-cancellation-service.js";
+import { getTicketUsageRound } from "../../shared/services/school-reservation-ticket-service.js";
 import { createElement } from "../../shared/utils/dom.js";
 import { formatText } from "../../shared/utils/format.js";
 import { formatMemberBirthDate, formatMemberGender, formatMemberWeight, getAgeOutputText, normalizeBirthDateParts } from "../../shared/utils/member-date.js";
@@ -688,7 +689,10 @@ function createAppTicketUsagePanel(memberDetailState, member, ticket) {
     memberId: member?.memberId || memberDetailState.selectedMember?.id,
     petId: member?.petId || memberDetailState.selectedPet?.id,
     ticketHistories: member?.ticketHistories || [],
-  }).map((reservation) => getTicketUsageItem(reservation));
+  }).map((reservation) => ({
+    ...getTicketUsageItem(reservation),
+    usageRound: getTicketUsageRound(reservation, ticket, memberDetailState.reservations, { includeTotal: false }),
+  }));
   const items = usageHistory.length ? usageHistory : (ticket.usageHistory || []);
 
   if (!items.length) {
@@ -700,6 +704,7 @@ function createAppTicketUsagePanel(memberDetailState, member, ticket) {
     const card = createElement("article", { className: `member-ticket-usage-card${item.status === "취소" ? " is-cancelled" : ""}` });
     card.append(createElement("strong", { textContent: item.service || "유치원" }));
     card.append(createElement("p", { textContent: formatTicketDateWithWeekday(item.visitDate || item.date) }));
+    card.append(createElement("p", { textContent: item.usageRound || "-", dataset: { field: "ticketUsageRound" } }));
     if (item.status === "취소") {
       card.append(createElement("span", { className: "member-ticket-usage-card-badge", textContent: "취소" }));
     }
@@ -1176,7 +1181,13 @@ function createWebTicketHistorySection(memberDetailState, member) {
     table.append(count);
     table.append(createElement("span", { textContent: ticketDateFacts.expiresAt }));
     table.append(createElement("span", { textContent: ticket.amount ? `${Number(ticket.amount).toLocaleString("ko-KR")}원` : "-" }));
-    const historyButton = createElement("button", { className: "member-ticket-history-arrow", type: "button", textContent: "›", ariaLabel: "이용권 내역 상세" });
+    const historyButton = createElement("button", {
+      className: "button button--icon member-ticket-history-arrow",
+      type: "button",
+      ariaLabel: "이용권 내역 상세",
+      dataset: { action: "openTicketDetail", entityId: ticket.id },
+    });
+    historyButton.append(createElement("img", { className: "row-more-icon", src: "../assets/iconChevronRight.svg", alt: "" }));
     historyButton.addEventListener("click", () => {
       memberDetailState.isTicketDetailModalOpen = true;
       memberDetailState.selectedTicketHistory = ticket;
@@ -1220,21 +1231,28 @@ function createTicketDetailModal(memberDetailState) {
   const usage = createElement("section", { className: "ticket-detail-usage" });
   const usageHeader = createElement("div", { className: "ticket-detail-usage-header" });
   usageHeader.append(createElement("h3", { textContent: "사용 내역" }));
-  usageHeader.append(createElement("p", {
-    className: getRawTicketReservableCount(ticket) < 0 ? "is-error" : "",
-    textContent: `예약 가능 ${formatTicketReservableCount(ticket)} · 이용 완료 ${getTicketReservedCount(ticket)}회 · 잔여 ${getTicketRemainingCount(ticket)}회`,
-  }));
+  const usageSummary = createElement("p");
+  usageSummary.append(createElement("span", {
+    className: "ticket-detail-reservable-count",
+    textContent: `예약 가능 ${formatTicketReservableCount(ticket)}`,
+    dataset: { state: getRawTicketReservableCount(ticket) <= 2 ? "warning" : "normal" },
+  }), ` · 이용 완료 ${getTicketReservedCount(ticket)}회 · 잔여 ${getTicketRemainingCount(ticket)}회`);
+  usageHeader.append(usageSummary);
   usage.append(usageHeader);
   const usageTable = createElement("div", { className: "ticket-detail-usage-table" });
-  ["상태", "서비스", "방문일", "예약 일시 (취소 일시)"].forEach((label) => usageTable.append(createElement("span", { className: "ticket-detail-usage-header-cell", textContent: label })));
+  ["상태", "서비스", "회차", "방문일", "예약 일시 (취소 일시)"].forEach((label) => usageTable.append(createElement("span", { className: "ticket-detail-usage-header-cell", textContent: label })));
   const usageHistory = getTicketUsageHistory(ticket, memberDetailState.reservations, {
     memberId: memberDetailState.selectedMember?.id,
     petId: memberDetailState.selectedPet?.id,
     ticketHistories: memberDetailState.selectedPet?.ticketHistories || [],
-  }).map((reservation) => getTicketUsageItem(reservation));
+  }).map((reservation) => ({
+    ...getTicketUsageItem(reservation),
+    usageRound: getTicketUsageRound(reservation, ticket, memberDetailState.reservations, { includeTotal: false }),
+  }));
   (usageHistory.length ? usageHistory : ticket.usageHistory || []).forEach((item) => {
     usageTable.append(createElement("span", { className: `ticket-detail-usage-status status-${getTicketStatusTone(item.status)}`, textContent: item.status || "-" }));
     usageTable.append(createElement("span", { textContent: item.service || "유치원" }));
+    usageTable.append(createElement("span", { textContent: item.usageRound || "-", dataset: { field: "ticketUsageRound" } }));
     usageTable.append(createElement("span", { textContent: formatTicketDate(item.visitDate || item.date) }));
     usageTable.append(createElement("span", { textContent: formatTicketDate(item.cancelledAt || item.createdAt || item.reservedAt || item.date) }));
   });

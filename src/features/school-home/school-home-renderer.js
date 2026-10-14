@@ -9,7 +9,7 @@ import { formatMemberWeight } from "../../shared/utils/member-date.js";
 import { saveSchoolHomeReservation } from "../../shared/storage/school-home-storage.js";
 import { updateTicketHistoryCounters } from "../../shared/storage/member-storage.js";
 import { cancelSchoolReservation } from "../../shared/services/school-reservation-cancellation-service.js";
-import { getLatestUsedTicketHistoryId, getTicketExpiryDate } from "../../shared/services/ticket-status-service.js";
+import { getLatestUsedTicketHistoryId, getTicketExpiryDate, getTicketUsageItem } from "../../shared/services/ticket-status-service.js";
 import {
   createSchoolReservation,
   getPetReservableCount,
@@ -121,7 +121,7 @@ function createSchoolHomeWebShell(schoolHomeState) {
   return shell;
 }
 
-function createWebHeader() {
+export function createWebHeader() {
   const header = createElement("header", {
     className: "header",
     dataset: { area: "header" },
@@ -162,7 +162,7 @@ function createHeaderIconButton(iconPath, label) {
   return button;
 }
 
-function createSchoolNavigation(platform) {
+export function createSchoolNavigation(platform) {
   return createBusinessNavigation({
     className: platform === "web" ? "business-navigation school-navigation web" : "school-navigation app",
     dataset: { area: "navigation", platform },
@@ -620,6 +620,7 @@ function createWebReservationBody(schoolHomeState, summary) {
   ["상태", ...(summary.isMonthlyMemberSearch ? ["예약일"] : []), "반려견", "품종", "예약자"].forEach((labelText) => {
     header.append(createElement("strong", { textContent: labelText }));
   });
+  header.append(createElement("span", { ariaLabel: "예약 상세" }));
   table.append(header);
 
   if (summary.reservations.length === 0) {
@@ -663,14 +664,27 @@ function createWebReservationRow(schoolHomeState, reservation, showReservationDa
   const checkboxCell = createElement("label", { className: "school-reservation-checkbox-cell" });
   checkboxCell.append(checkbox);
   row.append(checkboxCell);
+  const displayStatus = getTicketUsageItem(reservation).status;
   row.append(createElement("span", {
     className: `school-reservation-status${reservation.status === "취소" ? " is-cancelled" : ""}`,
-    textContent: reservation.status,
+    textContent: displayStatus,
+    dataset: { state: displayStatus === "이용 완료" ? "completed" : "idle" },
   }));
   if (showReservationDate) row.append(createElement("span", { textContent: reservation.date || "-" }));
   row.append(createElement("span", { textContent: reservation.petName }));
   row.append(createElement("span", { textContent: reservation.breed }));
   row.append(createElement("span", { textContent: reservation.guardianName || "-" }));
+  const more = createElement("button", {
+    className: "button button--icon",
+    type: "button",
+    ariaLabel: `${reservation.petName} 더보기`,
+    dataset: { action: "openReservationDetail", entityId: reservation.id },
+  });
+  more.append(createElement("img", { className: "button__icon school-reservation-more-icon", src: CHEVRON_RIGHT_ICON_PATH, alt: "" }));
+  more.addEventListener("click", () => {
+    window.location.href = `./school-reservation-detail.html?reservationId=${encodeURIComponent(reservation.id)}`;
+  });
+  row.append(more);
   return row;
 }
 

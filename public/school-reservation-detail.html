@@ -9,6 +9,122 @@
   </head>
   <body>
     <div id="app" data-screen="schoolReservationDetail"></div>
+    <template data-template="appReservationMemo">
+      <details class="disclosure school-reservation-detail-memo-section" data-area="reservationMemo">
+        <summary class="disclosure__heading">메모</summary>
+        <div class="disclosure__body">
+          <p class="disclosure__copy" data-field="reservationMemo"></p>
+          <button class="button button--text-primary" type="button" data-action="editReservationMemo">메모 수정</button>
+        </div>
+      </details>
+    </template>
+    <template data-template="webReservationDetail">
+      <main class="school-home-web-shell" data-platform="web">
+        <div data-area="webHeader"></div>
+        <div class="school-home-web-layout">
+          <div data-area="webNavigation" class="reservation-detail-navigation"></div>
+          <section class="content reservation-detail-web-content" data-area="content">
+            <div class="page-title">
+              <div class="page-title__group">
+                <a class="button button--icon" href="./index.html" aria-label="유치원 예약 목록으로"><img class="button__icon" src="../assets/iconChevronLeft.svg" alt=""></a>
+                <h1>유치원 예약 상세</h1>
+              </div>
+              <button class="button button--danger" type="button" data-action="cancelReservation">예약 취소</button>
+            </div>
+            <div class="reservation-detail-web-cards">
+              <section class="card card--section">
+                <div class="reservation-detail-card-heading">
+                  <h2>예약 정보</h2>
+                  <span class="reservation-detail-status" data-field="status"></span>
+                </div>
+                <dl class="reservation-detail-info-list">
+                  <dt>반려견</dt><dd data-field="pet"></dd>
+                  <dt>보호자</dt><dd data-field="guardian"></dd>
+                  <dt>연락처</dt><dd data-field="phone"></dd>
+                </dl>
+                <label class="field">
+                  <span class="field__label">메모</span>
+                  <textarea class="field__control reservation-detail-memo" data-field="reservationMemo" placeholder="성격, 알러지 등 필요한 내용 입력 (최대 500자)"></textarea>
+                </label>
+              </section>
+              <section class="card card--section">
+                <div class="reservation-detail-card-heading">
+                  <h2>등원일자</h2>
+                  <button class="button button--text-primary" type="button" data-action="editReservationDate" aria-haspopup="dialog">수정</button>
+                </div>
+                <p data-field="reservationDate"></p>
+              </section>
+              <section class="card card--section">
+                <div class="reservation-detail-card-heading">
+                  <h2>이용권</h2>
+                  <button class="button button--text-primary" type="button" data-action="editReservationTicket" aria-haspopup="dialog">수정</button>
+                </div>
+                <div><span data-field="ticketName"></span><span class="reservation-detail-ticket-round" data-field="ticketRound"></span></div>
+              </section>
+            </div>
+          </section>
+        </div>
+      </main>
+    </template>
+    <template data-template="reservationDateEdit">
+      <section class="alert-overlay" data-area="reservationDateEdit">
+        <form class="alert-dialog" role="dialog" aria-modal="true" aria-labelledby="reservation-date-edit-title">
+          <div class="alert-dialog-content">
+            <div class="reservation-detail-form-heading">
+              <h2 class="alert-dialog-title reservation-detail-form-title" id="reservation-date-edit-title">등원일자 수정</h2>
+              <button class="button button--icon" type="button" data-action="closeDateEdit" aria-label="등원일자 수정 닫기">×</button>
+            </div>
+            <label class="field">
+              <span class="field__label">등원일자</span>
+              <input class="field__control" type="date" data-field="reservationDate" required>
+            </label>
+            <p class="field__error" data-field="dateError" role="alert"></p>
+          </div>
+          <div class="alert-dialog-actions modal-footer-actions">
+            <button class="button button--primary alert-dialog__button" type="submit" data-action="saveReservationDate" disabled>수정</button>
+          </div>
+        </form>
+      </section>
+    </template>
+    <template data-template="reservationTicketEdit">
+      <section class="alert-overlay" data-area="reservationTicketEdit">
+        <form class="alert-dialog reservation-ticket-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="reservation-ticket-edit-title">
+          <div class="alert-dialog-content reservation-ticket-edit-content">
+            <h2 class="alert-dialog-title reservation-detail-form-title" id="reservation-ticket-edit-title">이용권 변경</h2>
+            <h3 class="reservation-ticket-edit-label">변경 전 이용권</h3>
+            <section class="card card--section" data-area="currentTicket" aria-label="변경 전 이용권">
+              <strong data-field="ticketName"></strong>
+              <dl class="reservation-detail-info-list">
+                <dt>총횟수</dt><dd data-field="ticketTotal"></dd>
+                <dt>예약 가능 횟수</dt><dd class="reservation-ticket-count" data-field="ticketCount" aria-live="polite"></dd>
+                <dt>만료일</dt><dd data-field="ticketExpiry"></dd>
+              </dl>
+            </section>
+            <h3 class="reservation-ticket-edit-label">변경 가능한 이용권</h3>
+            <div class="reservation-ticket-table-wrap">
+              <table class="reservation-ticket-table">
+                <thead><tr><th scope="col">이용권명</th><th scope="col">총횟수</th><th scope="col">예약 가능 횟수</th><th scope="col">만료일</th></tr></thead>
+                <tbody data-area="availableTickets"></tbody>
+              </table>
+            </div>
+            <p data-field="ticketEmpty" hidden>변경 가능한 이용권이 없습니다.</p>
+            <p class="field__error" data-field="ticketError" role="alert"></p>
+          </div>
+          <div class="alert-dialog-actions modal-footer-actions">
+            <button class="button button--alert-secondary alert-dialog__button" type="button" data-action="cancelTicketEdit">취소</button>
+            <button class="button button--primary alert-dialog__button" type="submit" data-action="saveReservationTicket" disabled>변경</button>
+          </div>
+        </form>
+      </section>
+    </template>
+    <template data-template="reservationTicketRow">
+      <tr>
+        <td><label class="reservation-ticket-option"><input type="radio" name="reservationTicket" data-field="ticketSelection"><span data-field="ticketName"></span></label></td>
+        <td data-field="ticketTotal"></td>
+        <td class="reservation-ticket-count" data-field="ticketCount" aria-live="polite"></td>
+        <td data-field="ticketExpiry"></td>
+      </tr>
+    </template>
     <script type="module" src="../src/platforms/school-reservation-detail.js"></script>
   </body>
 </html>
