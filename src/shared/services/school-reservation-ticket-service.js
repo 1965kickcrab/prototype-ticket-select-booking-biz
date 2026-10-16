@@ -1,3 +1,22 @@
+import { getDateKey, getTicketExpiryDate } from "./ticket-status-service.js";
+
+export function getTicketReservableCount(ticket) {
+  return Math.max(Number(ticket?.reservableCount ?? ticket?.remainingCount) || 0, 0);
+}
+
+export function isReservationTicketAvailable(ticket, reservations = [], context = {}) {
+  if (!ticket || getTicketReservableCount(ticket) < 1) return false;
+  const expiry = ticket.expiresAt || getTicketExpiryDate(ticket, reservations, context);
+  const expiryKey = getDateKey(expiry);
+  return !expiryKey || expiryKey >= getDateKey(new Date());
+}
+
+export function getAvailableReservationTickets(pet, reservations = [], memberId = "") {
+  const ticketHistories = pet?.ticketHistories || [];
+  const context = { memberId, petId: pet?.id || "", ticketHistories };
+  return ticketHistories.filter((ticket) => isReservationTicketAvailable(ticket, reservations, context));
+}
+
 export function getTicketUsageRound(reservation, ticketHistory, reservations, { includeTotal = true } = {}) {
   const totalCount = Math.max(Number(ticketHistory?.totalCount ?? ticketHistory?.quantity) || 0, 0);
   if (!reservation?.ticketHistoryId || reservation?.isOverbooked || (includeTotal && totalCount <= 0)) return "-";

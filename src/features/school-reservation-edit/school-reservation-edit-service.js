@@ -1,9 +1,8 @@
 import { getSchoolHomeReservations, saveSchoolHomeReservation } from "../../shared/storage/school-home-storage.js";
 import { getStoredMembers, updateTicketHistoryCounters } from "../../shared/storage/member-storage.js";
+import { getTicketReservableCount, isReservationTicketAvailable } from "../../shared/services/school-reservation-ticket-service.js";
 
-export function getTicketReservableCount(ticket) {
-  return Math.max(Number(ticket?.reservableCount ?? ticket?.remainingCount) || 0, 0);
-}
+export { getTicketReservableCount } from "../../shared/services/school-reservation-ticket-service.js";
 
 export function getReservedDatesForEdit(reservation, reservations) {
   return new Set(reservations.filter((item) => item.id !== reservation.id
@@ -37,7 +36,8 @@ export function saveReservationEdit(reservationId, { date, ticketHistoryId, memo
   const pet = member?.pets?.find((item) => item.id === reservation.petId);
   const ticket = pet?.ticketHistories?.find((item) => item.id === ticketHistoryId);
   const changed = ticketHistoryId !== reservation.ticketHistoryId;
-  if (changed && (!ticket || getTicketReservableCount(ticket) < 1)) return { message: "사용 가능한 이용권이 없습니다." };
+  const ticketContext = { memberId: reservation.memberId, petId: reservation.petId, ticketHistories: pet?.ticketHistories || [] };
+  if (changed && !isReservationTicketAvailable(ticket, reservations, ticketContext)) return { message: "사용 가능한 이용권이 없습니다." };
   if (changed) {
     const context = { memberId: reservation.memberId, petId: reservation.petId };
     if (reservation.ticketHistoryId) updateTicketHistoryCounters({ ...context, ticketHistoryId: reservation.ticketHistoryId, reservableDelta: 1 });

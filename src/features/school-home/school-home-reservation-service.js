@@ -1,3 +1,5 @@
+import { getAvailableReservationTickets, getTicketReservableCount } from "../../shared/services/school-reservation-ticket-service.js";
+
 export function getReservationPet(member, petId) {
   return (member?.pets || []).find((pet) => pet.id === petId) || null;
 }
@@ -12,12 +14,11 @@ export function getPetReservationLimit(pet) {
   return Number(pet?.totalReservableCountByType?.school) || 0;
 }
 
-export function getPetReservableCount(pet) {
+export function getPetReservableCount(pet, reservations = [], memberId = "") {
   const ticketHistories = Array.isArray(pet?.ticketHistories) ? pet.ticketHistories : [];
   if (!ticketHistories.length) return getPetReservationLimit(pet);
-  return ticketHistories.reduce((total, ticket) => {
-    return total + Math.max(Number(ticket?.reservableCount ?? ticket?.remainingCount) || 0, 0);
-  }, 0);
+  return getAvailableReservationTickets(pet, reservations, memberId)
+    .reduce((total, ticket) => total + getTicketReservableCount(ticket), 0);
 }
 
 export function shouldRequireTicketChange({ selectedDateCount = 0, selectedTicket, availableTickets = [] } = {}) {
@@ -37,7 +38,7 @@ export function getRegistrationValidation({ member, pet, ticketSelected = true, 
     .map((reservation) => reservation.date));
   if (dates.some((date) => existingDates.has(date))) return { isValid: false, message: "이미 예약된 날짜가 포함되어 있습니다." };
 
-  const total = getPetReservableCount(pet);
+  const total = getPetReservableCount(pet, reservations, member.id);
   if (dates.length > total && !allowOverLimit) return { isValid: false, message: "예약 가능한 횟수를 초과했습니다." };
   return { isValid: true, message: "" };
 }

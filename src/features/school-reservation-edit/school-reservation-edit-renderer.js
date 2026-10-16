@@ -5,7 +5,8 @@ import { createSchoolReservationTicketSheet } from "../../shared/components/scho
 import { createSchoolReservationCancelAlert } from "../../shared/components/school-reservation-cancel-alert.js";
 import { createAlertDialog, createConfirmAlert } from "../../shared/components/alert.js";
 import { cancelSchoolReservation } from "../../shared/services/school-reservation-cancellation-service.js";
-import { getTicketUsageRound } from "../../shared/services/school-reservation-ticket-service.js";
+import { getTicketUsageRound, isReservationTicketAvailable } from "../../shared/services/school-reservation-ticket-service.js";
+import { getReservationTicketOptions } from "../school-reservation-detail/school-reservation-detail-service.js";
 import { createElement } from "../../shared/utils/dom.js";
 import { getReservedDatesForEdit, getTicketChangePreview, getTicketReservableCount, saveReservationEdit } from "./school-reservation-edit-service.js";
 import { createReservationDatePicker } from "./school-reservation-edit-datepicker.js";
@@ -68,10 +69,14 @@ export function renderSchoolReservationEdit(page, reservationId) {
   const openTicketSheet = (event) => {
     const trigger = event.currentTarget;
     const tickets = pet?.ticketHistories || [];
+    const options = getReservationTicketOptions(reservation);
     const sheet = createSchoolReservationTicketSheet({
-      tickets: tickets.filter((ticket) => ticket.id === reservation.ticketHistoryId || getTicketReservableCount(ticket) > 0),
+      tickets: [options.currentTicket, ...options.availableTickets].filter(Boolean),
       selectedId: draft.ticketHistoryId,
       getLabel: (ticket) => `${ticket.ticketName || "이용권"} · ${getTicketReservableCount(ticket)}회 예약 가능`,
+      isDisabled: (ticket) => !isReservationTicketAvailable(ticket, getSchoolHomeReservations(), {
+        memberId: reservation.memberId, petId: reservation.petId, ticketHistories: tickets,
+      }),
       onClose: () => trigger.focus(),
       onSelect: (ticket) => {
         if (ticket.id === draft.ticketHistoryId) { trigger.focus(); return; }
