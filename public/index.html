@@ -9,6 +9,30 @@
   </head>
   <body>
     <div id="app" data-screen="schoolHome"></div>
+    <template data-template="reservationList">
+      <section class="school-reservation-list" data-area="reservationList" data-platform="web">
+        <div class="school-reservation-list-toolbar" data-area="reservationListToolbar"></div>
+        <div class="school-reservation-table-wrapper">
+          <div class="school-reservation-table school-reservation-table--tickets" role="table" aria-label="전체 기간 예약 목록" data-area="reservationListTable">
+            <div class="school-reservation-table-row is-header" role="row">
+              <label class="school-reservation-checkbox-cell" role="columnheader">
+                <input type="checkbox" aria-label="현재 페이지 예약 전체 선택" data-action="selectReservationPage">
+              </label>
+              <strong role="columnheader">상태</strong>
+              <strong role="columnheader">예약일</strong>
+              <strong role="columnheader">반려견</strong>
+              <strong role="columnheader">예약일시</strong>
+              <strong role="columnheader">이용권명</strong>
+              <strong role="columnheader">지급일</strong>
+              <strong role="columnheader">총횟수</strong>
+              <strong role="columnheader">사용한 회차</strong>
+              <span role="columnheader" aria-label="예약 상세"></span>
+            </div>
+          </div>
+        </div>
+        <nav class="school-reservation-pagination" aria-label="예약 목록 페이지" data-area="reservationListPagination"></nav>
+      </section>
+    </template>
     <script type="module" src="../src/platforms/app.js"></script>
     <noscript>
       <p>JavaScript를 켜고 다시 시도해 주세요.</p>

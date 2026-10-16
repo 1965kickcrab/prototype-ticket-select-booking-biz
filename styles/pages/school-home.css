@@ -4,6 +4,72 @@
   gap: 16px;
 }
 
+.school-reservation-view-modes {
+  display: flex;
+  gap: var(--space-2);
+  margin-right: var(--space-2);
+}
+
+.school-reservation-view-button[data-state="selected"],
+.school-reservation-page-button[aria-current="page"] {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.school-reservation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.school-reservation-list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.school-reservation-table--tickets {
+  min-width: 1090px;
+  height: calc(40px + 50px * 20 + 2px);
+}
+
+.school-reservation-table--tickets .school-reservation-table-row {
+  grid-template-columns: 40px 78px 110px minmax(80px, 1fr) 160px minmax(120px, 2fr) 110px 80px 110px 40px;
+}
+
+.school-reservation-control[data-state="cancelled"] {
+  visibility: hidden;
+}
+
+.school-reservation-table--tickets .school-reservation-table-placeholder-row {
+  display: flex;
+}
+
+.school-reservation-list .school-reservation-table-wrapper {
+  overflow-x: auto;
+}
+
+.school-reservation-pagination {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.school-reservation-page-button {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 var(--space-2);
+  font-size: 13px;
+}
+
+.school-reservation-page-button:disabled {
+  color: var(--color-text-muted);
+  background: var(--color-page-subtle);
+}
+
 .school-registration-modal-overlay {
   position: fixed;
   z-index: 50;

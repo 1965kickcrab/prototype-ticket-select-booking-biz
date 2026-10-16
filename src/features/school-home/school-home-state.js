@@ -17,6 +17,8 @@ export function createSchoolHomeState() {
     currentMonth: todayDateKey.slice(0, 7),
     selectedDate: todayDateKey,
     selectedReservationIds: [],
+    viewMode: "calendar",
+    reservationListPage: 1,
     hideCancelledReservations: true,
     toastMessage,
     toastQueue: [],
@@ -94,8 +96,11 @@ export function getSelectedDateSummary(schoolHomeState) {
 }
 
 export function getFilteredReservationsByDate(schoolHomeState, selectedDate = schoolHomeState.selectedDate) {
+  return getFilteredReservations(schoolHomeState, getReservationsByDate(schoolHomeState.reservations, selectedDate));
+}
+
+export function getFilteredReservations(schoolHomeState, reservations = schoolHomeState.reservations || []) {
   const searchTerm = normalizeSearchText(schoolHomeState.searchTerm);
-  let reservations = getReservationsByDate(schoolHomeState.reservations, selectedDate);
 
   if (searchTerm) {
     reservations = reservations.filter((reservation) => {

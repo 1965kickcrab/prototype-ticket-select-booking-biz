@@ -10,6 +10,7 @@ import { saveSchoolHomeReservation } from "../../shared/storage/school-home-stor
 import { updateTicketHistoryCounters } from "../../shared/storage/member-storage.js";
 import { cancelSchoolReservation } from "../../shared/services/school-reservation-cancellation-service.js";
 import { getLatestUsedTicketHistoryId, getTicketExpiryDate, getTicketUsageItem } from "../../shared/services/ticket-status-service.js";
+import { getReservationCreatedAtText, getReservationListPage, getReservationTicketColumns } from "./school-home-list-service.js";
 import {
   createSchoolReservation,
   getPetReservableCount,
@@ -198,6 +199,7 @@ function createSchoolWebContent(schoolHomeState) {
   titleBar.append(titleGroup);
 
   const actions = createElement("div", { className: "page-title__actions" });
+  actions.append(createReservationViewModeControls(schoolHomeState));
   actions.append(createElement("button", {
     className: "button button--primary",
     type: "button",
@@ -207,12 +209,99 @@ function createSchoolWebContent(schoolHomeState) {
   titleBar.append(actions);
 
   const sectionGroup = createElement("div", { className: "web-sections", dataset: { area: "webSections", feature: "schoolHome" } });
-  sectionGroup.append(createSchoolCalendarPanel(schoolHomeState, "web"));
-  sectionGroup.append(createSchoolReservationPanel(schoolHomeState, "web"));
+  if (schoolHomeState.viewMode === "list") {
+    sectionGroup.append(createSchoolReservationList(schoolHomeState));
+  } else {
+    sectionGroup.append(createSchoolCalendarPanel(schoolHomeState, "web"));
+    sectionGroup.append(createSchoolReservationPanel(schoolHomeState, "web"));
+  }
 
   content.append(titleBar);
   content.append(sectionGroup);
   return content;
+}
+
+function createReservationViewModeControls(state) {
+  const controls = createElement("div", { className: "school-reservation-view-modes", ariaLabel: "뷰모드 전환" });
+  controls.setAttribute("role", "group");
+  [["calendar", "달력"], ["list", "목록"]].forEach(([mode, label]) => {
+    const selected = state.viewMode === mode;
+    const button = createElement("button", {
+      className: "button button--secondary school-reservation-view-button",
+      type: "button",
+      textContent: label,
+      dataset: { action: "changeReservationViewMode", viewMode: mode, state: selected ? "selected" : "idle" },
+    });
+    button.setAttribute("aria-pressed", String(selected));
+    button.addEventListener("click", () => {
+      if (state.viewMode === mode) return;
+      state.viewMode = mode;
+      state.reservationListPage = 1;
+      state.selectedReservationIds = [];
+      state.isReservationSearchMenuOpen = false;
+      state.isTagMenuOpen = false;
+      rerender(state);
+    });
+    controls.append(button);
+  });
+  return controls;
+}
+
+function createSchoolReservationList(state) {
+  const page = getReservationListPage(state);
+  state.reservationListPage = page.currentPage;
+  const list = document.querySelector('[data-template="reservationList"]').content.firstElementChild.cloneNode(true);
+  const toolbar = list.querySelector('[data-area="reservationListToolbar"]');
+  const filterKey = JSON.stringify([state.searchTerm, state.selectedReservationMember, state.selectedMemberTagNames]);
+  const renderFilteredList = (nextState) => {
+    const nextFilterKey = JSON.stringify([nextState.searchTerm, nextState.selectedReservationMember, nextState.selectedMemberTagNames]);
+    if (filterKey !== nextFilterKey) {
+      nextState.reservationListPage = 1;
+      nextState.selectedReservationIds = [];
+    }
+    rerender(nextState);
+  };
+  toolbar.append(createReservationSearchFilter(state, {
+    rerender: renderFilteredList,
+    onSearchInput: renderFilteredList,
+  }));
+  toolbar.append(createReservationPanelActions(state, page.reservations));
+  const allCheckbox = list.querySelector('[data-action="selectReservationPage"]');
+  const activeReservations = page.reservations.filter((reservation) => reservation.status !== "취소");
+  const selectedCount = activeReservations.filter((reservation) => state.selectedReservationIds.includes(reservation.id)).length;
+  allCheckbox.disabled = !activeReservations.length;
+  allCheckbox.checked = activeReservations.length > 0 && selectedCount === activeReservations.length;
+  allCheckbox.indeterminate = selectedCount > 0 && !allCheckbox.checked;
+  allCheckbox.addEventListener("change", () => {
+    state.selectedReservationIds = allCheckbox.checked ? activeReservations.map((reservation) => reservation.id) : [];
+    rerender(state);
+  });
+  const table = list.querySelector('[data-area="reservationListTable"]');
+  if (!page.reservations.length) table.append(createWebReservationPlaceholderRow());
+  page.reservations.forEach((reservation) => {
+    table.append(createWebReservationRow(state, reservation, false, true));
+  });
+  const pagination = list.querySelector('[data-area="reservationListPagination"]');
+  const addPageButton = (label, targetPage, disabled = false) => {
+    const button = createElement("button", {
+      className: "button button--secondary school-reservation-page-button",
+      type: "button",
+      textContent: label,
+      dataset: { action: "changeReservationListPage", page: targetPage, state: targetPage === page.currentPage && !disabled ? "selected" : "idle" },
+    });
+    button.disabled = disabled;
+    if (/^\d+$/.test(label) && targetPage === page.currentPage) button.setAttribute("aria-current", "page");
+    button.addEventListener("click", () => {
+      state.reservationListPage = targetPage;
+      state.selectedReservationIds = [];
+      rerender(state);
+    });
+    pagination.append(button);
+  };
+  addPageButton("이전", page.currentPage - 1, page.currentPage === 1);
+  for (let number = 1; number <= page.totalPages; number += 1) addPageButton(String(number), number);
+  addPageButton("다음", page.currentPage + 1, page.currentPage === page.totalPages);
+  return list;
 }
 
 function createSchoolCalendarPanel(schoolHomeState, platform) {
@@ -471,6 +560,37 @@ function getCalendarDateState({ isSelected, isHoliday, hasReservations, isCapaci
   return "idle";
 }
 
+function createReservationPanelActions(schoolHomeState, reservations) {
+  const cancelButton = createElement("button", {
+    className: "school-reservation-cancel-button",
+    type: "button",
+    textContent: "예약 취소",
+  });
+  const cancellableReservations = reservations.filter((reservation) => reservation.status !== "취소");
+  cancelButton.disabled = !schoolHomeState.selectedReservationIds.some((reservationId) => {
+    return cancellableReservations.some((reservation) => reservation.id === reservationId);
+  });
+  cancelButton.addEventListener("click", () => {
+    const alert = createSchoolReservationCancelAlert({
+      onConfirm: () => cancelSelectedReservations(schoolHomeState, reservations),
+    });
+    document.body.append(alert);
+  });
+  const headerActions = createElement("div", { className: "school-reservation-panel-actions" });
+  const hideCancelledLabel = createElement("label", { className: "school-reservation-hide-cancelled" });
+  const hideCancelledCheckbox = createElement("input", { type: "checkbox", dataset: { action: "hideCancelledReservations" } });
+  hideCancelledCheckbox.checked = schoolHomeState.hideCancelledReservations;
+  hideCancelledCheckbox.addEventListener("change", () => {
+    schoolHomeState.hideCancelledReservations = hideCancelledCheckbox.checked;
+    schoolHomeState.reservationListPage = 1;
+    schoolHomeState.selectedReservationIds = [];
+    rerender(schoolHomeState);
+  });
+  hideCancelledLabel.append(hideCancelledCheckbox, createElement("span", { textContent: "취소 목록 숨기기" }));
+  headerActions.append(hideCancelledLabel, cancelButton);
+  return headerActions;
+}
+
 function createSchoolReservationPanel(schoolHomeState, platform) {
   const summary = getSchoolReservationPanelSummary(schoolHomeState, platform);
   const panel = createElement("section", {
@@ -497,34 +617,8 @@ function createSchoolReservationPanel(schoolHomeState, platform) {
       textContent: summary.isHoliday ? "휴무" : `예약 ${summary.reservationCount}`,
     }));
     titleGroup.append(title);
-    const cancelButton = createElement("button", {
-      className: "school-reservation-cancel-button",
-      type: "button",
-      textContent: "예약 취소",
-    });
-    const cancellableReservations = summary.reservations.filter((reservation) => reservation.status !== "취소");
-    cancelButton.disabled = !schoolHomeState.selectedReservationIds.some((reservationId) => {
-      return cancellableReservations.some((reservation) => reservation.id === reservationId);
-    });
-    cancelButton.addEventListener("click", () => {
-      const alert = createSchoolReservationCancelAlert({
-        onConfirm: () => cancelSelectedReservations(schoolHomeState, summary.reservations),
-      });
-      document.body.append(alert);
-    });
-    const headerActions = createElement("div", { className: "school-reservation-panel-actions" });
-    const hideCancelledLabel = createElement("label", { className: "school-reservation-hide-cancelled" });
-    const hideCancelledCheckbox = createElement("input", { type: "checkbox" });
-    hideCancelledCheckbox.checked = schoolHomeState.hideCancelledReservations;
-    hideCancelledCheckbox.addEventListener("change", () => {
-      schoolHomeState.hideCancelledReservations = hideCancelledCheckbox.checked;
-      schoolHomeState.selectedReservationIds = [];
-      rerender(schoolHomeState);
-    });
-    hideCancelledLabel.append(hideCancelledCheckbox, createElement("span", { textContent: "취소 목록 숨기기" }));
     header.append(titleGroup);
-    headerActions.append(hideCancelledLabel, cancelButton);
-    header.append(headerActions);
+    header.append(createReservationPanelActions(schoolHomeState, summary.reservations));
     panel.append(header);
     panel.append(createWebReservationBody(schoolHomeState, summary));
     return panel;
@@ -647,12 +741,14 @@ function createWebReservationPlaceholderRow(isFilteredEmpty = false) {
   return row;
 }
 
-function createWebReservationRow(schoolHomeState, reservation, showReservationDate = false) {
+function createWebReservationRow(schoolHomeState, reservation, showReservationDate = false, showTicketColumns = false) {
   const row = createElement("div", {
     className: "school-reservation-table-row",
     dataset: { entityId: reservation.id, state: schoolHomeState.selectedReservationIds.includes(reservation.id) ? "selected" : "idle" },
   });
-  const checkbox = createElement("input", { type: "checkbox" });
+  if (showTicketColumns) row.setAttribute("role", "row");
+  const controlState = reservation.status === "취소" ? "cancelled" : "idle";
+  const checkbox = createElement("input", { className: "school-reservation-control", type: "checkbox", ariaLabel: `${reservation.petName} 예약 선택`, dataset: { action: "selectReservation", entityId: reservation.id, state: controlState } });
   checkbox.disabled = reservation.status === "취소";
   checkbox.checked = schoolHomeState.selectedReservationIds.includes(reservation.id);
   checkbox.addEventListener("change", () => {
@@ -670,21 +766,32 @@ function createWebReservationRow(schoolHomeState, reservation, showReservationDa
     textContent: displayStatus,
     dataset: { state: displayStatus === "이용 완료" ? "completed" : "idle" },
   }));
-  if (showReservationDate) row.append(createElement("span", { textContent: reservation.date || "-" }));
+  if (showReservationDate || showTicketColumns) row.append(createElement("span", { textContent: reservation.date || "-" }));
   row.append(createElement("span", { textContent: reservation.petName }));
-  row.append(createElement("span", { textContent: reservation.breed }));
-  row.append(createElement("span", { textContent: reservation.guardianName || "-" }));
+  if (showTicketColumns) row.append(createElement("span", { textContent: getReservationCreatedAtText(reservation) }));
+  const columns = showTicketColumns
+    ? getReservationTicketColumns(schoolHomeState, reservation)
+    : [reservation.breed, reservation.guardianName || "-"];
+  columns.forEach((value, index) => {
+    const cell = createElement("span", { textContent: value });
+    if (showTicketColumns && index === 0 && !reservation.isOverbooked && reservation.ticketHistoryId) {
+      cell.title = reservation.ticketHistoryId;
+    }
+    row.append(cell);
+  });
   const more = createElement("button", {
-    className: "button button--icon",
+    className: "button button--icon school-reservation-control",
     type: "button",
     ariaLabel: `${reservation.petName} 더보기`,
-    dataset: { action: "openReservationDetail", entityId: reservation.id },
+    dataset: { action: "openReservationDetail", entityId: reservation.id, state: controlState },
   });
+  more.disabled = reservation.status === "취소";
   more.append(createElement("img", { className: "button__icon school-reservation-more-icon", src: CHEVRON_RIGHT_ICON_PATH, alt: "" }));
   more.addEventListener("click", () => {
     window.location.href = `./school-reservation-detail.html?reservationId=${encodeURIComponent(reservation.id)}`;
   });
   row.append(more);
+  if (showTicketColumns) Array.from(row.children).forEach((cell) => cell.setAttribute("role", "cell"));
   return row;
 }
 
