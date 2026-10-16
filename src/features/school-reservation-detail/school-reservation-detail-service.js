@@ -1,7 +1,8 @@
 import { getSchoolHomeReservations, saveSchoolHomeReservation } from "../../shared/storage/school-home-storage.js";
 import { getStoredMembers } from "../../shared/storage/member-storage.js";
-import { getDateKey, getTicketExpiryDate, getTicketStatus } from "../../shared/services/ticket-status-service.js";
-import { getTicketReservableCount, saveReservationEdit } from "../school-reservation-edit/school-reservation-edit-service.js";
+import { getDateKey, getTicketExpiryDate } from "../../shared/services/ticket-status-service.js";
+import { isReservationTicketAvailable } from "../../shared/services/school-reservation-ticket-service.js";
+import { saveReservationEdit } from "../school-reservation-edit/school-reservation-edit-service.js";
 
 export function saveReservationMemo(reservationId, memo) {
   const reservation = getSchoolHomeReservations().find((item) => item.id === reservationId);
@@ -15,12 +16,8 @@ export function getReservationTicketOptions(reservation) {
   const pet = member?.pets?.find((item) => item.id === reservation.petId);
   const tickets = pet?.ticketHistories || [];
   const context = { memberId: reservation.memberId, petId: reservation.petId, ticketHistories: tickets };
-  const availableTickets = tickets.filter((ticket) => {
-    if (ticket.id === reservation.ticketHistoryId || getTicketReservableCount(ticket) < 1) return false;
-    const status = getTicketStatus(ticket, reservations, context);
-    const expiry = getTicketExpiryDate(ticket, reservations, context);
-    return status !== "횟수 소진" && status !== "만료" && (!expiry || getDateKey(expiry) >= getDateKey(new Date()));
-  });
+  const availableTickets = tickets.filter((ticket) => ticket.id !== reservation.ticketHistoryId
+    && isReservationTicketAvailable(ticket, reservations, context));
   return {
     currentTicket: tickets.find((ticket) => ticket.id === reservation.ticketHistoryId),
     availableTickets,
