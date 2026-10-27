@@ -7,11 +7,11 @@ import { createSchoolReservationCancelAlert } from "../../shared/components/scho
 import { createToast, TOAST_AUTO_DISMISS_MS } from "../../shared/components/toast.js";
 import { createElement } from "../../shared/utils/dom.js";
 import { formatMemberWeight } from "../../shared/utils/member-date.js";
-import { saveSchoolHomeReservation } from "../../shared/storage/school-home-storage.js";
-import { updateTicketHistoryCounters } from "../../shared/storage/member-storage.js";
+import { getSchoolHomeReservations, saveSchoolHomeReservation } from "../../shared/storage/school-home-storage.js";
+import { getStoredMembers, updateTicketHistoryCounters } from "../../shared/storage/member-storage.js";
 import { cancelSchoolReservation } from "../../shared/services/school-reservation-cancellation-service.js";
-import { getLatestUsedTicketHistoryId, getTicketExpiryDate, getTicketUsageItem } from "../../shared/services/ticket-status-service.js";
-import { getAvailableReservationTickets, getTicketReservableCount, isReservationTicketAvailable } from "../../shared/services/school-reservation-ticket-service.js";
+import { getLatestUsedTicketHistoryId, getOverbookedReservationCount, getTicketExpiryDate, getTicketUsageItem } from "../../shared/services/ticket-status-service.js";
+import { getAvailableReservationTickets, getTicketReservableCount } from "../../shared/services/school-reservation-ticket-service.js";
 import {
   createSchoolReservation,
   getPetReservableCount,
@@ -1085,6 +1085,13 @@ function createAppReservationMemberField(schoolHomeState, draft) {
   const field = createElement("section", { className: "school-registration-field school-registration-member-field school-app-reservation-member-field" });
   field.append(createElement("h3", { textContent: "회원" }));
   const { member, pet } = getAppReservationMemberPet(schoolHomeState, draft);
+  if (member && pet && getOverbookedReservationCount(schoolHomeState.reservations, { memberId: member.id, petId: pet.id }) > 0) {
+    field.append(createElement("p", {
+      className: "field__error",
+      textContent: "초과 등록한 회원입니다",
+      dataset: { field: "overbookedMemberNotice" },
+    }));
+  }
   const input = createElement("input", {
     className: "school-registration-member-search",
     type: "search",
@@ -1454,7 +1461,7 @@ function createAppReservationTicketSheet(schoolHomeState) {
 
 function createReservationDateField(schoolHomeState, draft, { isAppRegistration = false } = {}) {
   const field = createElement("section", { className: "school-registration-field school-registration-date-field" });
-  const title = createElement("h3", { textContent: "날짜" });
+  const title = createElement("h3", { textContent: isAppRegistration ? "날짜 선택" : "날짜" });
   const selectedMember = schoolHomeState.members.find((member) => member.id === draft.memberId);
   const selectedPet = getReservationPet(selectedMember, draft.petId);
   const availableTickets = getAvailableReservationTickets(selectedPet, schoolHomeState.reservations, draft.memberId);
@@ -1565,6 +1572,7 @@ function createReservationDateField(schoolHomeState, draft, { isAppRegistration 
 }
 
 function getTicketHistoryById(pet, ticketId) {
+  if (!ticketId) return null;
   return (pet?.ticketHistories || []).find((ticket) => ticket.id === ticketId || ticket.ticketId === ticketId) || null;
 }
 
@@ -1575,15 +1583,9 @@ function createReservationRegistrationFooter(schoolHomeState, draft, { isAppRegi
   const selectedCount = draft.selectedDates.length;
   const isOverLimit = selectedCount > totalCount;
   const availableTickets = getAvailableReservationTickets(pet, schoolHomeState.reservations, draft.memberId);
-  const selectedTicket = getTicketHistoryById(pet, draft.ticketId);
-  const ticketCapacity = getTicketReservableCount(selectedTicket);
-  const hasTicketAllocation = Boolean(draft.ticketId) && draft.selectedDates.some((date) => draft.selectedDates.indexOf(date) < ticketCapacity);
-  const hasOverbookedSelection = draft.selectedDates.some((date) => draft.selectedDates.indexOf(date) >= ticketCapacity);
-  const isTicketSelected = !selectedTicket || hasTicketAllocation || hasOverbookedSelection;
   const validation = getRegistrationValidation({
     member,
     pet,
-    ticketSelected: isTicketSelected,
     selectedDates: draft.selectedDates,
     reservations: schoolHomeState.reservations,
     capacityClosedDates: schoolHomeState.capacityClosedDates,
@@ -1804,20 +1806,35 @@ function createPickdropTypeCheckbox(schoolHomeState, draft, selection, type, lab
 }
 
 function submitSchoolReservations(schoolHomeState, draft, { preserveMember = false } = {}) {
+  schoolHomeState.members = getStoredMembers();
+  schoolHomeState.reservations = getSchoolHomeReservations();
   const member = schoolHomeState.members.find((item) => item.id === draft.memberId);
   const pet = getReservationPet(member, draft.petId);
-  const selectedTicket = getTicketHistoryById(pet, draft.ticketId)
-    || getAvailableReservationTickets(pet, schoolHomeState.reservations, draft.memberId).find((item) => item.id === draft.ticketId);
-  const ticketContext = { memberId: draft.memberId, petId: draft.petId, ticketHistories: pet?.ticketHistories || [] };
-  if (draft.ticketId && !isReservationTicketAvailable(selectedTicket, schoolHomeState.reservations, ticketContext)) {
+  const selectedDates = [...new Set(draft.selectedDates)].sort();
+  const validation = getRegistrationValidation({
+    member,
+    pet,
+    selectedDates,
+    reservations: schoolHomeState.reservations,
+    capacityClosedDates: schoolHomeState.capacityClosedDates,
+    allowOverLimit: true,
+  });
+  if (!validation.isValid) {
+    setSchoolHomeToast(schoolHomeState, validation.message);
+    rerender(schoolHomeState);
+    return;
+  }
+  const selectedTicket = getAvailableReservationTickets(pet, schoolHomeState.reservations, draft.memberId)
+    .find((ticket) => ticket.id === draft.ticketId);
+  if (draft.ticketId && !selectedTicket) {
     setSchoolHomeToast(schoolHomeState, "사용 가능한 이용권이 없습니다.");
     rerender(schoolHomeState);
     return;
   }
   const ticketCapacity = getTicketReservableCount(selectedTicket);
   let didExhaustSelectedTicket = false;
-  draft.selectedDates.forEach((date) => {
-    const ticket = selectedTicket && draft.selectedDates.indexOf(date) < ticketCapacity ? selectedTicket : null;
+  selectedDates.forEach((date, index) => {
+    const ticket = selectedTicket && index < ticketCapacity ? selectedTicket : null;
     const reservation = saveSchoolHomeReservation(createSchoolReservation({
       member,
       pet,
@@ -1844,7 +1861,7 @@ function submitSchoolReservations(schoolHomeState, draft, { preserveMember = fal
       }
     }
   });
-  schoolHomeState.selectedDate = draft.selectedDates[0];
+  schoolHomeState.selectedDate = selectedDates[0];
   setSchoolHomeToast(schoolHomeState, [
     RESERVATION_SUCCESS_TOAST_MESSAGE,
     ...(didExhaustSelectedTicket ? [TICKET_DEPLETED_TOAST_MESSAGE] : []),

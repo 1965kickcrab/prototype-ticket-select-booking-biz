@@ -73,7 +73,7 @@ export function createWebReservationDetail(reservation) {
     openReservationTicketEdit(page, current, ticketEditButton, () => {
       updateDate();
       showSavedToast(page, "이용권을 변경했습니다");
-    });
+    }, () => showSavedToast(page, NO_RESERVATION_TICKET_CHANGE_MESSAGE));
   });
   return page;
 }
