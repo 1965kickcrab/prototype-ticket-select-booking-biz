@@ -4,6 +4,17 @@ import { createElement } from "../../shared/utils/dom.js";
 
 export function createReservationDatePicker({ selectedDate, getDisabledDates, onSelect, onClose }) {
   const overlay = document.querySelector('[data-template="reservationDatePicker"]').content.firstElementChild.cloneNode(true);
+  if (window.matchMedia("(max-width: 430px)").matches) {
+    overlay.className = "app-bottom-sheet-overlay";
+    overlay.querySelector('[role="dialog"]').className = "app-bottom-sheet";
+    overlay.querySelector('[data-area="datePickerContent"]').className = "reservation-datepicker__body";
+    const header = overlay.querySelector('[data-area="datePickerHeader"]');
+    const closeButton = overlay.querySelector('[data-action="closeDatePicker"]');
+    header.className = "reservation-datepicker__header";
+    closeButton.className = "button button--secondary";
+    header.prepend(closeButton);
+    overlay.querySelector('[data-area="datePickerActions"]').remove();
+  }
   let month = selectedDate.slice(0, 7);
   const close = () => { overlay.remove(); onClose(); };
   prepareModalOverlay(overlay, { onEscape: close });

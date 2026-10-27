@@ -534,10 +534,14 @@ function createAppTicketSection(memberDetailState, member) {
   });
   const title = createElement("div", { className: "member-detail-app-ticket-title" });
   title.append(createElement("strong", { textContent: "이용권" }));
-  const availability = getReservationAvailability(member, memberDetailState.reservations);
+  const reservableCount = getActiveTicketReservableCount(getMemberTicketHistories(member));
+  const overbookedCount = getOverbookedReservationCount(memberDetailState.reservations, {
+    memberId: member.memberId || member.id,
+    petId: member.petId,
+  });
   title.append(createElement("span", {
-    className: availability.state === "error" ? "is-error" : "",
-    textContent: `(${availability.state === "error" ? availability.text : `예약 가능 ${availability.text}`})`,
+    className: overbookedCount > 0 ? "is-error" : "",
+    textContent: overbookedCount > 0 ? `(초과 예약 ${overbookedCount}회)` : `(예약 가능 ${formatTicketReservableCount(reservableCount)})`,
   }));
   section.append(title);
   section.append(createTicketIssuePrimaryButton(memberDetailState, member));
@@ -677,7 +681,7 @@ function createAppTicketSummary(ticket) {
   const summary = createElement("section", { className: "member-ticket-detail-summary" });
   summary.append(createElement("strong", { textContent: ticket.ticketName || "이용권" }));
   summary.append(createElement("p", {
-    textContent: `${ticket.totalCount ?? 0}회 / ${getTicketValidityText(ticket)} / ${ticket.amount ? `${Number(ticket.amount).toLocaleString("ko-KR")}원` : "-"}`,
+    textContent: `${ticket.totalCount ?? 0}회 / ${getTicketValidityText(ticket, { showExpiry: false })} / ${ticket.amount ? `${Number(ticket.amount).toLocaleString("ko-KR")}원` : "-"}`,
   }));
   return summary;
 }
@@ -697,7 +701,7 @@ function createAppTicketUsagePanel(memberDetailState, member, ticket) {
   const items = usageHistory.length ? usageHistory : (ticket.usageHistory || []);
 
   if (!items.length) {
-    panel.append(createTicketHistoryPlaceholder("member-ticket-usage-empty"));
+    panel.append(createTicketHistoryPlaceholder("member-ticket-usage-empty", "사용 내역이 없습니다."));
     return panel;
   }
 
@@ -1201,8 +1205,8 @@ function createTicketDetailModal(memberDetailState) {
   const overlay = createModalOverlay({ className: "ticket-detail-modal-overlay", dataset: { area: "ticketDetailModal", state: "open" } });
   const modal = createElement("div", { className: "ticket-detail-modal" });
   const header = createElement("header", { className: "ticket-detail-modal-header" });
-  header.append(createElement("h2", { textContent: "이용권 상세" }));
-  const close = createElement("button", { className: "button button--icon", type: "button", textContent: "×", ariaLabel: "이용권 상세 닫기" });
+  header.append(createElement("h2", { textContent: "이용권 사용 내역" }));
+  const close = createElement("button", { className: "button button--icon", type: "button", textContent: "×", ariaLabel: "이용권 사용 내역 닫기" });
   close.addEventListener("click", () => closeTicketDetailModal(memberDetailState));
   header.append(close);
   modal.append(header);
@@ -1225,16 +1229,6 @@ function createTicketDetailModal(memberDetailState) {
   const usage = createElement("section", { className: "ticket-detail-usage" });
   const usageHeader = createElement("div", { className: "ticket-detail-usage-header" });
   usageHeader.append(createElement("h3", { textContent: "사용 내역" }));
-  const usageSummary = createElement("p");
-  usageSummary.append(createElement("span", {
-    className: "ticket-detail-reservable-count",
-    textContent: `예약 가능 ${formatTicketReservableCount(ticket)}`,
-    dataset: { state: getRawTicketReservableCount(ticket) <= 2 ? "warning" : "normal" },
-  }), ` · 이용 완료 ${getTicketReservedCount(ticket)}회 · 잔여 ${getTicketRemainingCount(ticket)}회`);
-  usageHeader.append(usageSummary);
-  usage.append(usageHeader);
-  const usageTable = createElement("div", { className: "ticket-detail-usage-table" });
-  ["상태", "서비스", "회차", "방문일", "예약 일시 (취소 일시)"].forEach((label) => usageTable.append(createElement("span", { className: "ticket-detail-usage-header-cell", textContent: label })));
   const usageHistory = getTicketUsageHistory(ticket, memberDetailState.reservations, {
     memberId: memberDetailState.selectedMember?.id,
     petId: memberDetailState.selectedPet?.id,
@@ -1243,14 +1237,25 @@ function createTicketDetailModal(memberDetailState) {
     ...getTicketUsageItem(reservation),
     usageRound: getTicketUsageRound(reservation, ticket, memberDetailState.reservations, { includeTotal: false }),
   }));
-  (usageHistory.length ? usageHistory : ticket.usageHistory || []).forEach((item) => {
+  const usageItems = usageHistory.length ? usageHistory : ticket.usageHistory || [];
+  const usageSummary = createElement("p");
+  usageSummary.append(createElement("span", {
+    className: "ticket-detail-reservable-count",
+    textContent: `예약 가능 ${formatTicketReservableCount(ticket)}`,
+    dataset: { state: getRawTicketReservableCount(ticket) <= 2 ? "warning" : "normal" },
+  }), ` · 예약 ${usageItems.filter((item) => item.status === "예약").length}건 · 이용 완료 ${getTicketReservedCount(ticket)}회 · 취소 ${usageItems.filter((item) => item.status === "취소").length}건`);
+  usageHeader.append(usageSummary);
+  usage.append(usageHeader);
+  const usageTable = createElement("div", { className: "ticket-detail-usage-table" });
+  ["상태", "서비스", "회차", "방문일", "예약 일시 (취소 일시)"].forEach((label) => usageTable.append(createElement("span", { className: "ticket-detail-usage-header-cell", textContent: label })));
+  usageItems.forEach((item) => {
     usageTable.append(createElement("span", { className: `ticket-detail-usage-status status-${getTicketStatusTone(item.status)}`, textContent: item.status || "-" }));
     usageTable.append(createElement("span", { textContent: item.service || "유치원" }));
     usageTable.append(createElement("span", { textContent: item.usageRound || "-", dataset: { field: "ticketUsageRound" } }));
     usageTable.append(createElement("span", { textContent: formatTicketDate(item.visitDate || item.date) }));
     usageTable.append(createElement("span", { textContent: formatTicketDate(item.cancelledAt || item.createdAt || item.reservedAt || item.date) }));
   });
-  if (!(usageHistory.length || (ticket.usageHistory || []).length)) usage.append(createTicketHistoryPlaceholder("ticket-detail-usage-empty"));
+  if (!usageItems.length) usage.append(createTicketHistoryPlaceholder("ticket-detail-usage-empty"));
   else usage.append(usageTable);
   modal.append(usage);
 
@@ -1381,10 +1386,13 @@ function createMemberTagDisplaySection(title, tags) {
   return section;
 }
 
-function createTicketHistoryPlaceholder(className = "member-ticket-history-placeholder") {
+function createTicketHistoryPlaceholder(
+  className = "member-ticket-history-placeholder",
+  message = "지급한 이용권 내역이 없습니다.",
+) {
   return createElement("p", {
     className,
-    textContent: "지급한 이용권 내역이 없습니다.",
+    textContent: message,
     dataset: { state: "empty" },
   });
 }
@@ -1524,8 +1532,8 @@ function getTicketStatusTone(status) {
   return "danger";
 }
 
-function getTicketValidityText(ticketHistory) {
-  if (ticketHistory.expiresAt) {
+function getTicketValidityText(ticketHistory, { showExpiry = true } = {}) {
+  if (showExpiry && ticketHistory.expiresAt) {
     return formatDateLabel(ticketHistory.expiresAt);
   }
 

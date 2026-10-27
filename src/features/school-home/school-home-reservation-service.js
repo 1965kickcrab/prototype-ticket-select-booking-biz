@@ -15,8 +15,6 @@ export function getPetReservationLimit(pet) {
 }
 
 export function getPetReservableCount(pet, reservations = [], memberId = "") {
-  const ticketHistories = Array.isArray(pet?.ticketHistories) ? pet.ticketHistories : [];
-  if (!ticketHistories.length) return getPetReservationLimit(pet);
   return getAvailableReservationTickets(pet, reservations, memberId)
     .reduce((total, ticket) => total + getTicketReservableCount(ticket), 0);
 }
@@ -36,7 +34,7 @@ export function getRegistrationValidation({ member, pet, ticketSelected = true, 
   const existingDates = new Set((reservations || [])
     .filter((reservation) => reservation.status !== "취소" && reservation.memberId === member.id && reservation.petId === pet.id)
     .map((reservation) => reservation.date));
-  if (dates.some((date) => existingDates.has(date))) return { isValid: false, message: "이미 예약된 날짜가 포함되어 있습니다." };
+  if (dates.some((date) => existingDates.has(date))) return { isValid: false, message: "이미 예약된 날짜가 있습니다." };
 
   const total = getPetReservableCount(pet, reservations, member.id);
   if (dates.length > total && !allowOverLimit) return { isValid: false, message: "예약 가능한 횟수를 초과했습니다." };

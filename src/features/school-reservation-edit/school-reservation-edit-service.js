@@ -31,7 +31,7 @@ export function saveReservationEdit(reservationId, { date, ticketHistoryId, memo
   if (!reservation || reservation.status === "취소") return { reservation: null };
   if (!date) return { message: "예약 날짜를 선택해 주세요." };
   const duplicate = getReservedDatesForEdit(reservation, reservations).has(date);
-  if (duplicate) return { message: "이미 예약된 날짜가 포함되어 있습니다." };
+  if (duplicate) return { message: "이미 예약된 날짜가 있습니다." };
   const member = getStoredMembers().find((item) => item.id === reservation.memberId);
   const pet = member?.pets?.find((item) => item.id === reservation.petId);
   const ticket = pet?.ticketHistories?.find((item) => item.id === ticketHistoryId);

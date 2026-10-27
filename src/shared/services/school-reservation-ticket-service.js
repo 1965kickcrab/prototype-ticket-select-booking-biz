@@ -1,5 +1,12 @@
 import { getDateKey, getTicketExpiryDate } from "./ticket-status-service.js";
 
+export function compareTicketsByExpiry(left, right, reservations, context) {
+  const leftExpiry = getTicketExpiryDate(left, reservations, context)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+  const rightExpiry = getTicketExpiryDate(right, reservations, context)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+  if (leftExpiry !== rightExpiry) return leftExpiry - rightExpiry;
+  return String(left.issuedAt || left.id).localeCompare(String(right.issuedAt || right.id));
+}
+
 export function getTicketReservableCount(ticket) {
   return Math.max(Number(ticket?.reservableCount ?? ticket?.remainingCount) || 0, 0);
 }

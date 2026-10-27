@@ -18,10 +18,17 @@ export function renderSchoolReservationEdit(page, reservationId) {
   const member = getStoredMembers().find((item) => item.id === reservation.memberId);
   const pet = member?.pets?.find((item) => item.id === reservation.petId);
   const draft = { ...reservation };
+  const saveButton = page.querySelector('[data-action="saveReservationEdit"]');
+  const hasChanges = () => draft.date !== reservation.date
+    || (draft.ticketHistoryId || "") !== (reservation.ticketHistoryId || "")
+    || (draft.memo || "") !== (reservation.memo || "");
+  const updateSaveButton = () => { saveButton.disabled = !hasChanges(); };
+  updateSaveButton();
   const detailUrl = `./school-reservation-detail.html?reservationId=${encodeURIComponent(reservation.id)}`;
   page.querySelector('[data-action="closeReservationEdit"]').addEventListener("click", () => { window.location.href = detailUrl; });
   page.querySelector('[data-action="cancelReservation"]').addEventListener("click", () => {
     document.body.append(createSchoolReservationCancelAlert({
+      message: "예약을 삭제하시겠습니까?\n삭제된 예약은 복구할 수 없습니다.",
       onConfirm: () => {
         const result = cancelSchoolReservation(reservation, { remove: true });
         if (result.reservation) window.location.href = "./index.html?toast=reservationCancelled";
@@ -31,7 +38,7 @@ export function renderSchoolReservationEdit(page, reservationId) {
   page.querySelector('[data-area="reservationInfo"]').append(createReservationInfo(reservation, member, pet));
   const memo = page.querySelector('[data-field="reservationMemo"]');
   memo.value = draft.memo || "";
-  memo.addEventListener("input", () => { draft.memo = memo.value; });
+  memo.addEventListener("input", () => { draft.memo = memo.value; updateSaveButton(); });
   const dateLabel = page.querySelector('[data-field="reservationDateLabel"]');
   dateLabel.textContent = formatReservationDate(draft.date);
   const dateButton = page.querySelector('[data-action="editReservationDate"]');
@@ -49,7 +56,8 @@ export function renderSchoolReservationEdit(page, reservationId) {
     page.append(picker);
     picker.querySelector('[data-action="previousMonth"]').focus();
   });
-  page.querySelector('[data-action="saveReservationEdit"]').addEventListener("click", () => {
+  saveButton.addEventListener("click", () => {
+    if (!hasChanges()) return;
     const result = saveReservationEdit(reservation.id, draft);
     if (result.message) {
       const alert = createConfirmAlert({ message: result.message, onConfirm: () => alert.remove() });
@@ -65,6 +73,7 @@ export function renderSchoolReservationEdit(page, reservationId) {
     ticketLabel.textContent = draft.isOverbooked ? "선택 안함" : draft.ticketName || "-";
     const ticket = pet?.ticketHistories?.find((item) => item.id === draft.ticketHistoryId);
     ticketRound.textContent = getTicketUsageRound(draft, ticket, getSchoolHomeReservations());
+    updateSaveButton();
   };
   updateTicket();
   const openTicketSheet = (event) => {

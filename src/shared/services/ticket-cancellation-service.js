@@ -10,7 +10,8 @@ import {
   removeTicketHistory,
   updateTicketHistoryCounters,
 } from "../storage/member-storage.js";
-import { getTicketExpiryDate, getTicketStatus } from "./ticket-status-service.js";
+import { getTicketStatus } from "./ticket-status-service.js";
+import { compareTicketsByExpiry } from "./school-reservation-ticket-service.js";
 
 export function cancelTicketIssue({ memberId, petId, ticketHistoryId, cancelFutureReservations = false, today = new Date() } = {}) {
   const todayKey = getDateKey(today);
@@ -95,13 +96,6 @@ function isCompatibleTicket(ticket, cancelledTicket) {
 function isAvailableTicket(ticket, reservations, context) {
   const status = getTicketStatus(ticket, reservations, context);
   return getTicketReservableCount(ticket) > 0 && (status === "사용 전" || status === "이용 중");
-}
-
-function compareTicketsByExpiry(left, right, reservations, context) {
-  const leftExpiry = getTicketExpiryDate(left, reservations, context)?.getTime() ?? Number.MAX_SAFE_INTEGER;
-  const rightExpiry = getTicketExpiryDate(right, reservations, context)?.getTime() ?? Number.MAX_SAFE_INTEGER;
-  if (leftExpiry !== rightExpiry) return leftExpiry - rightExpiry;
-  return String(left.issuedAt || left.id).localeCompare(String(right.issuedAt || right.id));
 }
 
 function compareReservations(left, right) {

@@ -1,9 +1,10 @@
 import { prepareModalOverlay } from "../../shared/components/modal.js";
 import { getTicketChangePreview, getTicketReservableCount } from "../school-reservation-edit/school-reservation-edit-service.js";
 import { getReservationTicketOptions, saveReservationTicketChange } from "./school-reservation-detail-service.js";
+import { getSchoolHomeReservations } from "../../shared/storage/school-home-storage.js";
 import { createElement } from "../../shared/utils/dom.js";
 
-export function openReservationTicketEdit(page, reservation, trigger, onSave) {
+export function openReservationTicketEdit(page, reservation, trigger, onSave, onUnavailable) {
   const overlay = document.querySelector('[data-template="reservationTicketEdit"]').content.firstElementChild.cloneNode(true);
   const form = overlay.querySelector("form");
   const saveButton = overlay.querySelector('[data-action="saveReservationTicket"]');
@@ -49,6 +50,12 @@ export function openReservationTicketEdit(page, reservation, trigger, onSave) {
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     if (saveButton.disabled) return;
+    const current = getSchoolHomeReservations().find((item) => item.id === reservation.id);
+    if (current && current.status !== "취소" && !getReservationTicketOptions(current).availableTickets.length) {
+      close();
+      onUnavailable();
+      return;
+    }
     const result = saveReservationTicketChange(reservation.id, selectedId);
     if (result.message) { error.textContent = result.message; return; }
     if (!result.reservation) { window.location.replace("./index.html"); return; }

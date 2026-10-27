@@ -203,12 +203,27 @@
   height: 16px;
 }
 
+.reservation-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+  min-height: 28px;
+  border-radius: var(--radius-1);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+
 .reservation-cell.is-warning {
+  background: #ffebef;
   color: var(--color-warning);
   font-weight: 700;
 }
 
 .reservation-cell.is-error {
+  background: #ffebef;
   color: #ed6060;
   font-weight: 700;
 }

@@ -8,8 +8,8 @@ import { ensureTicketList } from "../../shared/data/ticket-list.js";
 export function createSchoolHomeState() {
   ensureTicketList();
   const todayDateKey = getTodayDateKey();
+  processSchoolTicketAttendance(getSchoolHomeReservations());
   const reservations = getSchoolHomeReservations();
-  processSchoolTicketAttendance(reservations);
   const members = getStoredMembers();
   const toastMessage = getSchoolHomeToastMessage();
 
