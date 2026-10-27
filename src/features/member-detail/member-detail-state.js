@@ -9,8 +9,8 @@ export function createMemberDetailState() {
   const queryParams = new URLSearchParams(window.location.search);
   const memberId = queryParams.get("memberId") || "";
   const petId = queryParams.get("petId") || "";
+  processSchoolTicketAttendance(getSchoolHomeReservations());
   const reservations = getSchoolHomeReservations();
-  processSchoolTicketAttendance(reservations);
   const members = getStoredMembers();
   const selectedMember = members.find((member) => member.id === memberId) || createEmptyMember();
   const selectedPet = findMemberPet(selectedMember, petId);

@@ -2,6 +2,7 @@ import { readJsonStorage, writeJsonStorage } from "./storage-utils.js";
 import {
   getSchoolHomeReservationMembers,
   getSchoolHomeReservations,
+  saveSchoolHomeReservation,
 } from "./school-home-storage.js";
 import {
   applyCatalogDrafts,
@@ -15,6 +16,7 @@ import {
 import { normalizePhoneNumber } from "../utils/phone.js";
 import { getTicketById } from "../data/ticket-list.js";
 import { getDateKey, getTicketExpiryDate, getTicketStartDate, getTicketStatus } from "../services/ticket-status-service.js";
+import { reconcileOverbookedReservations } from "../services/school-reservation-reconciliation-service.js";
 
 export const MEMBER_LIST_STORAGE_KEY = "memberList";
 export const LEGACY_MEMBER_LIST_STORAGE_KEY = "prototype.memberTags.memberList";
@@ -367,6 +369,15 @@ export function isSchoolTicketAttendanceProcessed(reservationId) {
 }
 
 export function processSchoolTicketAttendance(reservations, today = new Date()) {
+  const reconciliation = reconcileOverbookedReservations(
+    getStoredMembers(), reservations, readJsonStorage(SCHOOL_TICKET_ATTENDANCE_STORAGE_KEY, []), today
+  );
+  if (reconciliation.reassignedReservations.length) {
+    reconciliation.reassignedReservations.forEach(saveSchoolHomeReservation);
+    saveStoredMembers(reconciliation.members);
+    writeJsonStorage(SCHOOL_TICKET_ATTENDANCE_STORAGE_KEY, reconciliation.processedIds);
+  }
+  reservations = reconciliation.reservations;
   const processedIds = new Set(readJsonStorage(SCHOOL_TICKET_ATTENDANCE_STORAGE_KEY, []));
   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const pendingReservations = (reservations || []).filter((reservation) => {

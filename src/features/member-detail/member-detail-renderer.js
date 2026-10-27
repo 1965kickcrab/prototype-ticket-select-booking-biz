@@ -701,7 +701,7 @@ function createAppTicketUsagePanel(memberDetailState, member, ticket) {
   const items = usageHistory.length ? usageHistory : (ticket.usageHistory || []);
 
   if (!items.length) {
-    panel.append(createTicketHistoryPlaceholder("member-ticket-usage-empty"));
+    panel.append(createTicketHistoryPlaceholder("member-ticket-usage-empty", "사용 내역이 없습니다."));
     return panel;
   }
 
@@ -1386,10 +1386,13 @@ function createMemberTagDisplaySection(title, tags) {
   return section;
 }
 
-function createTicketHistoryPlaceholder(className = "member-ticket-history-placeholder") {
+function createTicketHistoryPlaceholder(
+  className = "member-ticket-history-placeholder",
+  message = "지급한 이용권 내역이 없습니다.",
+) {
   return createElement("p", {
     className,
-    textContent: "지급한 이용권 내역이 없습니다.",
+    textContent: message,
     dataset: { state: "empty" },
   });
 }
